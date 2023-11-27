@@ -2,13 +2,14 @@ import java.util.Properties
 
 plugins {
     id("java-gradle-plugin")
+    id("maven-publish")
     id("com.gradle.plugin-publish")  version "1.2.1"
     id("org.cyclonedx.bom") version "1.8.1"
     id("groovy")
 }
 
 val organization = "CycloneDX"
-group = "org.cyclonedx"
+group = "de.css.org.cyclonedx"
 version = "1.8.1"
 
 java.sourceCompatibility = JavaVersion.VERSION_1_8
@@ -19,7 +20,7 @@ repositories {
 }
 
 dependencies {
-    implementation("org.cyclonedx:cyclonedx-core-java:8.0.3") {
+    api("org.cyclonedx:cyclonedx-core-java:8.0.3") {
         exclude(group = "org.apache.logging.log4j", module ="log4j-slf4j-impl")
     }
 
@@ -60,7 +61,7 @@ gradlePlugin {
     vcsUrl.set("https://github.com/CycloneDX/cyclonedx-gradle-plugin.git")
     plugins {
         create("cycloneDxPlugin") {
-            id = "org.cyclonedx.bom"
+            id = "de.css.org.cyclonedx.bom"
             displayName = "CycloneDX BOM Generator"
             description = "The CycloneDX Gradle plugin creates an aggregate of all direct and transitive dependencies of a project and creates a valid CycloneDX Software Bill of Materials (SBOM)."
             implementationClass = "org.cyclonedx.gradle.CycloneDxPlugin"
@@ -69,3 +70,19 @@ gradlePlugin {
     }
 }
 
+publishing {
+    repositories {
+        maven {
+            url = uri("https://frog.css.de:8443/repository/cssgradleplugins/")
+            credentials {
+                username = ""
+                password = ""
+            }
+        }
+    }
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["java"])
+        }
+    }
+}

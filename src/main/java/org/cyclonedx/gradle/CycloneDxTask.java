@@ -57,10 +57,18 @@ import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.TaskAction;
+import org.w3c.dom.Document;
 
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
 import java.io.File;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -675,11 +683,25 @@ public class CycloneDxTask extends DefaultTask {
         }
     }
 
+    private String convertDocumentToString(Document doc) throws TransformerException {
+        TransformerFactory tf = TransformerFactory.newInstance();
+        Transformer trans = tf.newTransformer();
+        trans.setOutputProperty("indent", "yes");
+        StringWriter sw = new StringWriter();
+        trans.transform(new DOMSource(doc), new StreamResult(sw));
+        return sw.toString();
+    }
+
     private void writeXMLBom(final CycloneDxSchema.Version schemaVersion, final Bom bom)
             throws GeneratorException, ParserConfigurationException, IOException {
         final BomXmlGenerator bomGenerator = BomGeneratorFactory.createXml(schemaVersion, bom);
-        bomGenerator.generate();
-        final String bomString = bomGenerator.toXmlString();
+        Document doc = bomGenerator.generate();
+        String bomString;
+        try {
+            bomString = convertDocumentToString(doc);
+        } catch (TransformerException e) {
+            throw new GradleException(MESSAGE_WRITING_BOM_XML, e);
+        }
         final File bomFile = new File(getDestination().get(), getOutputName().get() + ".xml");
         getLogger().info(MESSAGE_WRITING_BOM_XML);
         FileUtils.write(bomFile, bomString, StandardCharsets.UTF_8, false);
